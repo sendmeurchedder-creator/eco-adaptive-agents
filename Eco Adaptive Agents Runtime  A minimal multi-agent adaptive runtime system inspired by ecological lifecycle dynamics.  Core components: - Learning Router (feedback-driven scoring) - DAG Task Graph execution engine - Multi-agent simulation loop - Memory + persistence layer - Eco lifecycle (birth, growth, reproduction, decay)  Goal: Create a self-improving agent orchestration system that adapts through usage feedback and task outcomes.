@@ -1,0 +1,241 @@
+Adaptive multi-agent runtime with learning router, DAG execution, and feedback-driven optimization loop.├── executor.py ├── eco.py ├── requirements.txt └── README.mdeco-adaptive-agents/
+│
+├── main.py          ← you create this
+├── demo.py          ← you create this
+├── agents.py        ← you create this
+├── router.py        ← you create this
+├── graph.py         ← you create this
+├── memory.py        ← you create this
+├── storage.py       ← you create this
+├── executor.py      ← you create this
+├── eco.py           ← you create this
+├── requirements.txt ← you create this
+└── README.md        ← you edit or replace# No external dependencies (keeps demo clean and runnable anywhere)class MemoryStore:
+    def __init__(self):
+        self.scores = {}
+
+    def update(self, agent, success):
+        if agent not in self.scores:
+            self.scores[0] = 0.5
+
+        self.scores[agent] = self.scores.get(agent, 0.5)
+        self.scores[agent] += 0.05 if success else -0.03
+        self.scores[agent] = max(0.01, min(1.0, self.scores[agent]))
+
+    def get_score(self, agent):
+        return self.scores.get(agent, 0.5)import random
+
+class FastAgent:
+    def __init__(self, name="fast"):
+        self.name = name
+
+    def run(self, task):
+        return random.random() > 0.35
+
+
+class AccurateAgent:
+    def __init__(self, name="accurate"):
+        self.name = name
+
+    def run(self, task):
+        return random.random() > 0.15
+
+
+class CreativeAgent:
+    def __init__(self, name="creative"):
+        self.name = name
+
+    def run(self, task):
+        return random.random() > 0.55import random
+
+class AdaptiveRouter:
+    def __init__(self, memory):
+        self.memory = memory
+
+    def select(self, agents):
+        scores = [(a, self.memory.get_score(a.name)) for a in agents]
+
+        total = sum(s for _, s in scores)
+        r = random.random() * total
+
+        upto = 0
+        for agent, score in scores:
+            upto += score
+            if upto >= r:
+                return agent
+
+        return agents[0]import sqlite3
+
+class Storage:
+    def __init__(self, db="runtime.db"):
+        self.conn = sqlite3.connect(db)
+        self._init()
+
+    def _init(self):
+        c = self.conn.cursor()
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task TEXT,
+            agent TEXT,
+            success INTEGER
+        )
+        """)
+        self.conn.commit()
+
+    def log(self, task, agent, success):
+        c = self.conn.cursor()
+        c.execute(
+            "INSERT INTO logs (task, agent, success) VALUES (?, ?, ?)",
+            (task, agent, int(success))
+        )
+        self.conn.commit()class TaskGraph:
+    def __init__(self):
+        self.nodes = {}
+        self.edges = {}
+
+    def add_task(self, name, agents, deps=None):
+        self.nodes[name] = agents
+        self.edges[name] = deps or []
+
+    def ready(self, completed):
+        return [
+            n for n, deps in self.edges.items()
+            if n not in completed and all(d in completed for d in deps)
+        ]import threading
+
+class Executor:
+    def run_parallel(self, tasks):
+        results = {}
+        lock = threading.Lock()
+
+        def run(name, fn):
+            res = fn()
+            with lock:
+                results[name] = res
+
+        threads = []
+        for name, fn in tasks.items():
+            t = threading.Thread(target=run, args=(name, fn))
+            threads.append(t)
+            t.start()
+
+        for t in threads:
+            t.join()
+
+        return resultsclass EcoMetrics:
+    def __init__(self):
+        self.counts = {}
+
+    def update(self, agent):
+        self.counts[agent] = self.counts.get(agent, 0) + 1
+
+    def diversity(self):
+        if not self.counts:
+            return 0
+
+        vals = list(self.counts.values())
+        avg = sum(vals) / len(vals)
+        return 1 - (max(vals) - min(vals)) / (avg + 1)from memory import MemoryStore
+from router import AdaptiveRouter
+from graph import TaskGraph
+from agents import FastAgent, AccurateAgent, CreativeAgent
+from storage import Storage
+from eco import EcoMetrics
+from executor import Executor
+
+
+def run():
+    memory = MemoryStore()
+    eco = EcoMetrics()
+    store = Storage()
+    router = AdaptiveRouter(memory)
+    executor = Executor()
+
+    agents = [
+        FastAgent(),
+        AccurateAgent(),
+        CreativeAgent()
+    ]
+
+    graph = TaskGraph()
+    graph.add_task("research", agents)
+    graph.add_task("analysis", agents, deps=["research"])
+    graph.add_task("summary", agents, deps=["analysis"])
+
+    completed = set()
+
+    while len(completed) < len(graph.nodes):
+        ready = graph.ready(completed)
+
+        if not ready:
+            break
+
+        batch = {}
+
+        for task in ready:
+            agent = router.select(graph.nodes[task])
+
+            def fn(a=agent, t=task):
+                return a.run(t)
+
+            batch[task] = fn
+
+        results = executor.run_parallel(batch)
+
+        for task, success in results.items():
+            agent = "unknown"
+
+            memory.update(agent, success)
+            eco.update(agent)
+            store.log(task, agent, success)
+
+            print(task, success)
+
+            if success:
+                completed.add(task)
+
+    print("Diversity:", eco.diversity())
+
+
+if __name__ == "__main__":
+    run()from main import run
+
+run()# Eco Adaptive Agents
+
+A minimal adaptive multi-agent runtime.
+
+## What it does
+
+- Routes tasks across multiple agents
+- Learns from success/failure feedback
+- Executes tasks using a dependency graph (DAG)
+- Tracks diversity and performance evolution
+
+## Run
+
+```bash
+python demo.py
+---
+
+# 3. GIT PUSH COMMANDS (COPY EXACTLY)
+
+After creating repo:
+
+```bash
+git clone https://github.com/YOUR_USERNAME/eco-adaptive-agents.git
+cd eco-adaptive-agentsgit add .
+git commit -m "Initial MVP: adaptive agent runtime with DAG + learning router"
+git push origin mainEco Adaptive Agents Runtime
+
+A minimal multi-agent adaptive runtime system inspired by ecological lifecycle dynamics.
+
+Core components:
+- Learning Router (feedback-driven scoring)
+- DAG Task Graph execution engine
+- Multi-agent simulation loop
+- Memory + persistence layer
+- Eco lifecycle (birth, growth, reproduction, decay)
+
+Goal:
+Create a self-improving agent orchestration system that adapts through usage feedback and task outcomes.
