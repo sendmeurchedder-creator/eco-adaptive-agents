@@ -1,0 +1,121 @@
+mkdir eco-adaptive-agents
+cd eco-adaptive-agentsclass Memory:
+    def __init__(self):
+        self.store = []
+
+    def add(self, item):
+        self.store.append(item)
+
+    def get_all(self):
+        return self.storeimport random
+
+class LearningRouter:
+    def __init__(self):
+        self.scores = {
+            "research": 1.0,
+            "analyze": 1.0,
+            "act": 1.0
+        }
+
+    def choose(self, task_type):
+        base = self.scores.get(task_type, 1.0)
+        return base + random.uniform(-0.2, 0.2)
+
+    def update(self, task_type, reward):
+        self.scores[task_type] = max(0.1, self.scores.get(task_type, 1.0) + reward)import random
+
+class Agent:
+    def __init__(self, name, role):
+        self.name = name
+        self.role = role
+        self.energy = 100
+
+    def act(self):
+        cost = random.randint(5, 15)
+        gain = random.randint(10, 25)
+        self.energy += gain - cost
+        return {
+            "agent": self.name,
+            "role": self.role,
+            "cost": cost,
+            "gain": gain,
+            "energy": self.energy
+        }class TaskGraph:
+    def __init__(self):
+        self.nodes = []
+
+    def add(self, task):
+        self.nodes.append(task)
+
+    def run(self):
+        results = []
+        for n in self.nodes:
+            results.append(n())
+        return resultsclass EcoSystem:
+    def __init__(self):
+        self.pool = 0
+
+    def decompose(self, result):
+        self.pool += result.get("gain", 0)
+
+    def recycle(self):
+        boost = self.pool // 10
+        self.pool = self.pool % 10
+        return boostclass Executor:
+    def run(self, agent):
+        return agent.act()from agents import Agent
+from router import LearningRouter
+from executor import Executor
+from eco import EcoSystem
+from memory import Memory
+
+router = LearningRouter()
+executor = Executor()
+eco = EcoSystem()
+memory = Memory()
+
+agents = [
+    Agent("A1", "research"),
+    Agent("A2", "analyze"),
+    Agent("A3", "act")
+]
+
+def run_cycle():
+    print("\n--- CYCLE START ---")
+
+    for agent in agents:
+        score = router.choose(agent.role)
+        result = executor.run(agent)
+
+        eco.decompose(result)
+        memory.add(result)
+
+        reward = (result["gain"] - result["cost"]) / 10
+        router.update(agent.role, reward)
+
+        print(result, "score:", round(score, 2))
+
+    boost = eco.recycle()
+    for a in agents:
+        a.energy += boost
+
+    print("Eco pool boost:", boost)
+    print("Memory size:", len(memory.get_all()))
+    print("--- CYCLE END ---\n")
+
+
+if __name__ == "__main__":
+    for i in range(5):
+        run_cycle()python main.py
+├── main.py          ← you create this
+├── demo.py          ← you create this
+├── agents.py        ← you create this
+├── router.py        ← you create this
+├── graph.py         ← you create this
+├── memory.py        ← you create this
+├── storage.py       ← you create this
+├── executor.py      ← you create this
+├── eco.py           ← you create this
+├── requirements.txt ← you create this
+└── README.md        ← you edit or replaceAdaptive multi-agent runtime with learning router, DAG execution, and feedback-driven optimization loop.eco-adaptive-agents/
+│
